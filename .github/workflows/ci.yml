@@ -1,0 +1,31 @@
+name: CI
+
+on:
+ push:
+   branches:
+     - main
+
+ pull_request:
+   branches:
+     - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: docker compose build
+
+      - name: Start Services
+        run: docker compose up -d
+
+      - name: Test App 1
+        run: curl http://localhost:8080/app1/ | grep "App 1 - Running behind Nginx!"
+
+      - name: Test App 2
+        run: curl http://localhost:8080/app2/ | grep "App 2 - Running behind Nginx!"
+
