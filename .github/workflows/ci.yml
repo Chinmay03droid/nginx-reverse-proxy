@@ -23,6 +23,9 @@ jobs:
       - name: Start Services
         run: docker compose up -d
 
+      - name: Check container status
+        run: docker compose ps
+
       - name: Test App 1
         run: curl http://localhost:8080/app1/ | grep "App 1 - Running behind Nginx!"
 
