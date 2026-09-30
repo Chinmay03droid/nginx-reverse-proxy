@@ -5,11 +5,23 @@ services:
     ports:
       - "5001:5001"
 
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
   app2:
     build: ./app2
     container_name: app2
     ports:
       - "5002:5002"
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5002/')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   nginx:
     image: nginx:latest
@@ -19,5 +31,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
     depends_on:
-      - app1
-      - app2
+      app1:
+        condition: service_healthy
+      app2:
+        condition: service_healthy
