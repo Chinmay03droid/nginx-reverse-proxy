@@ -13,9 +13,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets/GITHUB_TOKEN }}
 
       - name: Build Docker images
         run: docker compose build
@@ -47,4 +58,9 @@ jobs:
 
       - name: Test App 2
         run: curl http://localhost:8080/app2/ | grep "App 2 - Running behind Nginx!"
+
+      - name: Push images to GHCR
+        run: |
+          docker push ghcr.io/${{ github.repository_owner }}/nginx-reverse-proxy-app1:latest
+          docker push ghcr.io/${{ github.repository_owner }}/nginx-reverse-proxy-app2:latest
 
