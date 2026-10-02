@@ -12,7 +12,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,8 +23,24 @@ jobs:
       - name: Start Services
         run: docker compose up -d
 
-      - name: Check container status
-        run: docker compose ps
+      - name: Wait for services to be healthy
+        run: |
+          for i in {1..30}; do
+            app1_status=$(docker inspect app1 --format '{{.State.Health.Status}}')
+            app2_status=$(docker inspect app2 --format '{{.State.Health.Status}}')
+
+            if [ "$app1_status" = "healthy" ] && [ "$app2_status" = "healthy" ]; then
+               echo "Both services are healthy"
+               exit 0
+            fi
+
+            echo "Waiting for services..."
+            sleep 2
+          done
+
+          echo "Services did not become healthy"
+          docker compose ps
+          exit 1
 
       - name: Test App 1
         run: curl http://localhost:8080/app1/ | grep "App 1 - Running behind Nginx!"
