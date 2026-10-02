@@ -61,6 +61,6 @@ jobs:
 
       - name: Push images to GHCR
         run: |
-          docker push ghcr.io/${{ github.repository_owner }}/nginx-reverse-proxy-app1:latest
-          docker push ghcr.io/${{ github.repository_owner }}/nginx-reverse-proxy-app2:latest
+          docker push ghcr.io/chinmay03droid/nginx-reverse-proxy-app1:latest
+          docker push ghcr.io/chinmay03droid/nginx-reverse-proxy-app2:latest
 
