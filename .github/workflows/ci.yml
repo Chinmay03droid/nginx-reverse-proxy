@@ -1,13 +1,13 @@
 name: CI
 
 on:
- push:
-   branches:
-     - main
+  push:
+    branches:
+      - main
 
- pull_request:
-   branches:
-     - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
@@ -41,8 +41,8 @@ jobs:
             app2_status=$(docker inspect app2 --format '{{.State.Health.Status}}')
 
             if [ "$app1_status" = "healthy" ] && [ "$app2_status" = "healthy" ]; then
-               echo "Both services are healthy"
-               exit 0
+              echo "Both services are healthy"
+              exit 0
             fi
 
             echo "Waiting for services..."
@@ -54,13 +54,57 @@ jobs:
           exit 1
 
       - name: Test App 1
-        run: curl http://localhost:8080/app1/ | grep "App 1 - Running behind Nginx!"
+        run: curl --fail http://localhost:8080/app1/ | grep "App 1 - Running behind Nginx!"
 
       - name: Test App 2
-        run: curl http://localhost:8080/app2/ | grep "App 2 - Running behind Nginx!"
+        run: curl --fail http://localhost:8080/app2/ | grep "App 2 - Running behind Nginx!"
 
       - name: Push images to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           docker push ghcr.io/chinmay03droid/nginx-reverse-proxy-app1:latest
           docker push ghcr.io/chinmay03droid/nginx-reverse-proxy-app2:latest
 
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Deploy over SSH
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+
+          test -n "$EC2_HOST" || { echo "EC2_HOST secret is missing"; exit 1; }
+          test -n "$EC2_USER" || { echo "EC2_USER secret is missing"; exit 1; }
+          test -n "$EC2_SSH_KEY" || { echo "EC2_SSH_KEY secret is missing"; exit 1; }
+          test -n "$EC2_KNOWN_HOSTS" || { echo "EC2_KNOWN_HOSTS secret is missing"; exit 1; }
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          printf '%s\n' "$EC2_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=yes \
+            -o IdentitiesOnly=yes \
+            -o ConnectTimeout=15 \
+            "$EC2_USER@$EC2_HOST" \
+            'cd /home/ubuntu/nginx-reverse-proxy &&
+             sudo docker compose pull &&
+             sudo docker compose up -d --remove-orphans &&
+             curl --fail --silent --show-error http://localhost/health &&
+             curl --fail --silent --show-error http://localhost/app1/ &&
+             curl --fail --silent --show-error http://localhost/app2/'
+
+          rm -f ~/.ssh/deploy_key
