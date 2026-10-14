@@ -113,8 +113,8 @@ jobs:
             "$EC2_USER@$EC2_HOST" \
             "cd /home/ubuntu/nginx-reverse-proxy &&
              export IMAGE_TAG='$IMAGE_TAG' &&
-             sudo -E docker compose pull &&
-             sudo -E docker compose up -d --no-build --remove-orphans &&
+             sudo IMAGE_TAG='$IMAGE_TAG' docker compose pull &&
+             sudo IMAGE_TAG='$IMAGE_TAG' docker compose up -d --no-build --remove-orphans &&
              curl --fail --silent --show-error http://localhost/health &&
              curl --fail --silent --show-error http://localhost/app1/ &&
              curl --fail --silent --show-error http://localhost/app2/"
