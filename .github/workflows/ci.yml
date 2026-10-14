@@ -13,6 +13,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      IMAGE_TAG: ${{ github.sha }}
+
     permissions:
       contents: read
       packages: write
@@ -29,10 +32,15 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Docker images
-        run: docker compose build
+        run: |
+          docker build -t ghcr.io/chinmay03droid/nginx-reverse-proxy-app1:${IMAGE_TAG} ./app1
+          docker build -t ghcr.io/chinmay03droid/nginx-reverse-proxy-app2:${IMAGE_TAG} ./app2
+
+          docker tag ghcr.io/chinmay03droid/nginx-reverse-proxy-app1:${IMAGE_TAG} ghcr.io/chinmay03droid/nginx-reverse-proxy-app1:latest
+          docker tag ghcr.io/chinmay03droid/nginx-reverse-proxy-app2:${IMAGE_TAG} ghcr.io/chinmay03droid/nginx-reverse-proxy-app2:latest
 
       - name: Start Services
-        run: docker compose up -d
+        run: IMAGE_TAG=${IMAGE_TAG} docker compose up -d --no-build
 
       - name: Wait for services to be healthy
         run: |
@@ -62,6 +70,8 @@ jobs:
       - name: Push images to GHCR
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
+          docker push ghcr.io/chinmay03droid/nginx-reverse-proxy-app1:${IMAGE_TAG}
+          docker push ghcr.io/chinmay03droid/nginx-reverse-proxy-app2:${IMAGE_TAG}
           docker push ghcr.io/chinmay03droid/nginx-reverse-proxy-app1:latest
           docker push ghcr.io/chinmay03droid/nginx-reverse-proxy-app2:latest
 
@@ -78,6 +88,7 @@ jobs:
           EC2_USER: ${{ secrets.EC2_USER }}
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
           EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           set -euo pipefail
 
@@ -100,11 +111,12 @@ jobs:
             -o IdentitiesOnly=yes \
             -o ConnectTimeout=15 \
             "$EC2_USER@$EC2_HOST" \
-            'cd /home/ubuntu/nginx-reverse-proxy &&
-             sudo docker compose pull &&
-             sudo docker compose up -d --remove-orphans &&
+            "cd /home/ubuntu/nginx-reverse-proxy &&
+             export IMAGE_TAG='$IMAGE_TAG' &&
+             sudo -E docker compose pull &&
+             sudo -E docker compose up -d --no-build --remove-orphans &&
              curl --fail --silent --show-error http://localhost/health &&
              curl --fail --silent --show-error http://localhost/app1/ &&
-             curl --fail --silent --show-error http://localhost/app2/'
+             curl --fail --silent --show-error http://localhost/app2/"
 
           rm -f ~/.ssh/deploy_key

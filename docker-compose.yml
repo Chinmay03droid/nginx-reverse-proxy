@@ -1,6 +1,6 @@
 services:
   app1:
-    image: ghcr.io/chinmay03droid/nginx-reverse-proxy-app1:latest
+    image: ghcr.io/chinmay03droid/nginx-reverse-proxy-app1:${IMAGE_TAG:-latest}
     build: ./app1
     container_name: app1
     ports:
@@ -13,7 +13,7 @@ services:
       retries: 3
 
   app2:
-    image: ghcr.io/chinmay03droid/nginx-reverse-proxy-app2:latest
+    image: ghcr.io/chinmay03droid/nginx-reverse-proxy-app2:${IMAGE_TAG:-latest}
     build: ./app2
     container_name: app2
     ports:
