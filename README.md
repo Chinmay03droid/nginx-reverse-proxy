@@ -2,6 +2,10 @@
 
 A containerized, multi-application deployment demonstrating Nginx reverse proxying, Docker Compose, GitHub Actions CI/CD, GitHub Container Registry (GHCR), AWS EC2 deployment, and versioned rollback.
 
+## Architecture Diagram
+
+![Nginx Reverse Proxy Architecture](docs/architecture-1920x1080.png)
+
 ## Architecture
 
 ```text
